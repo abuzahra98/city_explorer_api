@@ -44,7 +44,7 @@ server.get('/weather',(req,res)=>{
 function Weather(locData) {
 
 console.log(locData)
-    this.forcast = locData.weather.description;
+    this.forecast = locData.weather.description;
     this.time = locData.valid_date;
 }
 
