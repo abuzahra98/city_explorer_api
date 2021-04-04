@@ -26,7 +26,7 @@ function Location(locData) {
    this.search_query = 'Lynnwood';
    this.formatted_query = locData[0].display_name;
     this.latitude = locData[0].lat;
-    this.longtitude = locData[0].lon;
+    this.longitude = locData[0].lon;
 }
 
 server.get('/weather',(req,res)=>{
@@ -44,8 +44,8 @@ server.get('/weather',(req,res)=>{
 function Weather(locData) {
 
 console.log(locData)
-    this.forcast = locData.valid_date;
-    this.time = locData.weather.description;
+    this.forcast = locData.weather.description;
+    this.time = locData.valid_date;
 }
 
 
