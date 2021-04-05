@@ -8,18 +8,20 @@ const server = express();
 const PORT = process.env.PORT || 5000;
 
 server.use(cors());
-
-server.get('/',(req,res)=>{
+server.get('/', rr);
+server.get('/location',locatine);
+server.get('/weather',weather);
+function  rr(req,res){
     res.send('you server is working')
-})
+}
 
 
-server.get('/location',(req,res)=>{
-    
-    let Data = require('./data/location.json');
+function locatine(req,res){
+    // let Data = require('./data/location.json');
+
     let locationData = new Location (Data);
     res.send(locationData);
-})
+}
 
 function Location(locData) {
 
@@ -29,7 +31,7 @@ function Location(locData) {
     this.longitude = locData[0].lon;
 }
 
-server.get('/weather',(req,res)=>{
+function weather(req,res){
     let data=[];
     let Data = require('./data/weather.json');
  Data.data.map(el=>
@@ -38,7 +40,7 @@ server.get('/weather',(req,res)=>{
     })
     
     res.send(data);
-})
+}
 
 
 function Weather(locData) {
