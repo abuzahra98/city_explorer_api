@@ -93,7 +93,6 @@ function park(req,res){
             {
                 dataPark.push(new Park (el));
             })
-            console.log('ddddddddddddddddddddd',dataPark)
         res.send(dataPark);
     })
 }
