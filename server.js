@@ -2,11 +2,13 @@
 
 const express = require('express'); 
 require('dotenv').config(); 
-
+const pg = require('pg');
 const cors = require('cors');
 const server = express();
 const PORT = process.env.PORT || 5000;
 const superagent = require('superagent');
+// const client = new pg.Client(process.env.DATABASE_URL);
+const client = new pg.Client({ connectionString: process.env.DATABASE_URL,   ssl: { rejectUnauthorized: false } });
 
 server.use(cors());
 
@@ -27,25 +29,75 @@ function Location(cityName,geoData) {
     this.formatted_query = geoData[0].display_name;
      this.latitude = geoData[0].lat;
      this.longitude = geoData[0].lon;
+     this.addToDataBase=function()
+     {
+       
+        let SQL = `INSERT INTO locations (search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4) RETURNING *;`;
+        let safeValues = [this.search_query,this.formatted_query,this.latitude,this.longitude];
+        client.query(SQL,safeValues)
+        .then(result=>{
+            return (result.rows);
+        })
+        .catch(error=>{
+            return (error);
+        })
+     }
  }
 
 
 function locatine(req,res){
     let cityName = req.query.city;
-    let key = process.env.LOCATION_KEY;
+    const queryDataBase = 'SELECT * FROM locations WHERE search_query = $1';
+    const valuesDataBase = [req.query.city];
+  
+    client.query(queryDataBase,valuesDataBase)
+    .then (result=>{
+       if(result.rows.length>0)
+       {
+        res.send(result.rows[0]);
+console.log(11111111111)
+       }else
+       {
+        console.log(22222222)
+              let key = process.env.LOCATION_KEY;
     let LocURL = `https://eu1.locationiq.com/v1/search.php?key=${key}&q=${cityName}&format=json`;
     superagent.get(LocURL) 
     .then(geoData => {
+        
         let gData = geoData.body;
+   
         const locationData = new Location(cityName, gData);
+        locationData.addToDataBase();
         res.send(locationData);
     })
+       }
+        
+       
+    })
+    .catch(error=>{
+        res.send(error);
+    })
+
+
+    
+    // let key = process.env.LOCATION_KEY;
+    // let LocURL = `https://eu1.locationiq.com/v1/search.php?key=${key}&q=${cityName}&format=json`;
+    // superagent.get(LocURL) 
+    // .then(geoData => {
+        
+    //     let gData = geoData.body;
+    //     console.log(gData)
+    //     const locationData = new Location(cityName, gData);
+    //     res.send(locationData);
+    // })
+}
+
+function callBackLocation()
+{
 
 }
 
-
 function Weather(gData) {
-
     this.forecast = gData.weather.description;
     this.time = gData.valid_date;
 }
@@ -53,7 +105,7 @@ function Weather(gData) {
 
 function weather(req,res){
     let cityName = req.query.search_query;
-    console.log(cityName)
+    // console.log(cityName)
     let key = process.env.WEATHER_KEY;
     let LocURL = `https://api.weatherbit.io/v2.0/forecast/daily?city=${cityName}&key=${key}`;
 
@@ -72,22 +124,15 @@ function weather(req,res){
     })
 }
 
-
-
-//     let LocURL = `https://api.weatherbit.io/v2.0/forecast/daily?city=${cityName}&key=${key}`;
-
 function park(req,res){
     let cityName = req.query.search_query;
-    console.log(cityName)
+    // console.log(cityName)
     let key = process.env.PARK_KEY;
     let LocURL = `https://developer.nps.gov/api/v1/parks?q=${cityName}&api_key=${key}`;
-    // console.log('ddddddddddddddddddddd',req.query)
     superagent.get(LocURL) 
      .then(geoData => {
         let gData = geoData.body;
-       
-
-
+    
         let dataPark=[];
             gData.data.map(el=>
             {
@@ -95,6 +140,8 @@ function park(req,res){
             })
         res.send(dataPark);
     })
+
+
 }
 function Park(gData) {
 
@@ -106,9 +153,6 @@ function Park(gData) {
 }
 
 
-
-
-
 function all(req,res){
     let err = {
         status: 500,
@@ -117,6 +161,12 @@ function all(req,res){
     res.status(500).send(err);
 }
 
-server.listen(PORT,()=>{
-    console.log(`Listening on PORT ${PORT}`)
-})
+// server.listen(PORT,()=>{
+//     console.log(`Listening on PORT ${PORT}`)
+// })
+client.connect()
+    .then(() => {
+        server.listen(PORT, () =>
+            console.log(`listening on ${PORT}`)
+        );
+    })
