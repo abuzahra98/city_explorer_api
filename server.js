@@ -7,8 +7,8 @@ const cors = require('cors');
 const server = express();
 const PORT = process.env.PORT || 5000;
 const superagent = require('superagent');
-// const client = new pg.Client(process.env.DATABASE_URL);
-const client = new pg.Client({ connectionString: process.env.DATABASE_URL,   ssl: { rejectUnauthorized: false } });
+const client = new pg.Client(process.env.DATABASE_URL);
+// const client = new pg.Client({ connectionString: process.env.DATABASE_URL,   ssl: { rejectUnauthorized: false } });
 
 server.use(cors());
 
@@ -16,6 +16,8 @@ server.get('/', rr);
 server.get('/location',locatine);
 server.get('/weather',weather);
 server.get('/parks',park);
+server.get('/movies',movies);
+server.get('/yelp',yelp);
 
 server.get('*',all);
 function  rr(req,res){
@@ -31,7 +33,6 @@ function Location(cityName,geoData) {
      this.longitude = geoData[0].lon;
      this.addToDataBase=function()
      {
-       
         let SQL = `INSERT INTO locations (search_query,formatted_query,latitude,longitude) VALUES ($1,$2,$3,$4) RETURNING *;`;
         let safeValues = [this.search_query,this.formatted_query,this.latitude,this.longitude];
         client.query(SQL,safeValues)
@@ -78,24 +79,8 @@ console.log(11111111111)
         res.send(error);
     })
 
-
-    
-    // let key = process.env.LOCATION_KEY;
-    // let LocURL = `https://eu1.locationiq.com/v1/search.php?key=${key}&q=${cityName}&format=json`;
-    // superagent.get(LocURL) 
-    // .then(geoData => {
-        
-    //     let gData = geoData.body;
-    //     console.log(gData)
-    //     const locationData = new Location(cityName, gData);
-    //     res.send(locationData);
-    // })
 }
 
-function callBackLocation()
-{
-
-}
 
 function Weather(gData) {
     this.forecast = gData.weather.description;
@@ -112,9 +97,6 @@ function weather(req,res){
     superagent.get(LocURL) 
      .then(geoData => {
         let gData = geoData.body;
-        // console.log('ddddddddddddddddddddd',gData)
-
-
         let data=[];
             gData.data.map(el=>
             {
@@ -126,7 +108,6 @@ function weather(req,res){
 
 function park(req,res){
     let cityName = req.query.search_query;
-    // console.log(cityName)
     let key = process.env.PARK_KEY;
     let LocURL = `https://developer.nps.gov/api/v1/parks?q=${cityName}&api_key=${key}`;
     superagent.get(LocURL) 
@@ -151,6 +132,72 @@ function Park(gData) {
     this.description=gData.description;
     this.url=gData.url;
 }
+function movies (req,res){
+    let cityName = req.query.search_query; 
+    console.log(req.query.search_query)
+    let key = process.env.MOVIES;
+    let LocURL = `https://api.themoviedb.org/3/search/movie?api_key=${key}&query=${cityName}`;
+superagent.get(LocURL)
+.then(geoData => {
+    let gData = geoData.body.results;
+
+    let datamovies=[];
+        gData.map(el=>
+        {
+            datamovies.push(new Movies (el));
+        })
+    res.send(datamovies);
+})
+}
+
+function Movies(gData) {
+
+    this.title = gData.original_title;
+    this.overview = gData.overview;
+    this.average_votes = gData.vote_average;
+    this.total_votes = gData.vote_count;
+    this.image_url = `https://image.tmdb.org/t/p/w500/${gData.poster_path}`;
+    this.popularity = gData.popularity;
+    this.released_on = gData.release_date;
+}
+
+function yelp (req,res){
+    let cityName = req.query.search_query; 
+    console.log(req.query.search_query)
+    let key = process.env.YELP;
+    const numberOfbage = 5;
+    const start = ((req.query.page - 1) * numberOfbage+1);
+    let LocURL = `https://api.yelp.com/v3/businesses/search?term=restaurant&location=${cityName}&limit=${numberOfbage}&offset=${start}`;
+superagent.get(LocURL)
+.set('Authorization', `Bearer ${key}`)
+.then(geoData => {
+    let gData = geoData.body.businesses;
+
+    let datayelp=[];
+        gData.map(el=>
+        {
+            datayelp.push(new Yelp (el));
+        })
+    res.send(datayelp);
+})
+}
+
+function Yelp(gData) {
+
+    this.name = gData.name;
+  this.image_url = gData.image_url;
+  this.price = gData.price;
+  this.rating = gData.rating;
+  this.url = gData.url;
+}
+
+
+
+
+
+
+
+
 
 
 function all(req,res){
@@ -161,9 +208,6 @@ function all(req,res){
     res.status(500).send(err);
 }
 
-// server.listen(PORT,()=>{
-//     console.log(`Listening on PORT ${PORT}`)
-// })
 client.connect()
     .then(() => {
         server.listen(PORT, () =>
